@@ -16,5 +16,7 @@ WORKDIR /app
 ENV NODE_ENV=production
 COPY --from=prod-deps /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
-EXPOSE 3000
+# proto-loader lee los .proto en runtime
+COPY protos ./protos
+EXPOSE 50051
 CMD ["node", "dist/main.js"]
