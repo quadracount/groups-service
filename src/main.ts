@@ -1,7 +1,11 @@
 import { NestFactory } from '@nestjs/core';
 import { type MicroserviceOptions, Transport } from '@nestjs/microservices';
 import { AppModule } from './app.module';
-import { GROUPS_PROTO, PROTO_LOADER_OPTIONS } from './grpc-options';
+import {
+  GROUPS_PROTO,
+  HEALTH_PROTO,
+  PROTO_LOADER_OPTIONS,
+} from './grpc-options';
 
 async function bootstrap() {
   const app = await NestFactory.createMicroservice<MicroserviceOptions>(
@@ -9,8 +13,9 @@ async function bootstrap() {
     {
       transport: Transport.GRPC,
       options: {
-        package: 'groups',
-        protoPath: GROUPS_PROTO,
+        // groups.proto y el health check estándar (para los probes de Kubernetes)
+        package: ['groups', 'grpc.health.v1'],
+        protoPath: [GROUPS_PROTO, HEALTH_PROTO],
         url: `0.0.0.0:${process.env.GRPC_PORT ?? '50051'}`,
         loader: PROTO_LOADER_OPTIONS,
       },

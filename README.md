@@ -14,6 +14,8 @@ diff balances-service/protos/balances.proto groups-service/protos/balances.proto
 
 Implementado (Fase 2): `GetUser`, `ListGroupsForUser`, `GetGroup`, `CreateExpense` y `ListExpenses`. El resto responde `UNIMPLEMENTED` hasta la Fase 4.
 
+También implementa `grpc.health.v1` (`protos/health.proto`, copia del estándar de gRPC) para los probes de Kubernetes.
+
 Los `.proto` se cargan con `keepCase: true` y `longs: Number` (`src/grpc-options.ts`, igual en el BFF): los campos se llaman como en el `.proto` (`group_id`) y los `int64` llegan como `number`.
 
 Cada operación sobre un grupo recibe `requester_id` (el usuario del JWT, lo manda el BFF). Si no es miembro, se responde `PERMISSION_DENIED`.

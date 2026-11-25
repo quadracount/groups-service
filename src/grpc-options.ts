@@ -2,6 +2,7 @@ import { join } from 'node:path';
 
 export const GROUPS_PROTO = join(process.cwd(), 'protos', 'groups.proto');
 export const BALANCES_PROTO = join(process.cwd(), 'protos', 'balances.proto');
+export const HEALTH_PROTO = join(process.cwd(), 'protos', 'health.proto');
 
 /**
  * Opciones de @grpc/proto-loader. Iguales en el BFF:
