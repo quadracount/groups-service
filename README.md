@@ -12,7 +12,7 @@ diff groups-service/protos/groups.proto bff-gateway/protos/groups.proto
 diff balances-service/protos/balances.proto groups-service/protos/balances.proto
 ```
 
-Implementado (Fase 2): `GetUser`, `ListGroupsForUser`, `GetGroup`, `CreateExpense` y `ListExpenses`. El resto responde `UNIMPLEMENTED` hasta la Fase 4.
+Implementa todo `groups.proto`. `RemoveMember` le pregunta el saldo a balances-service por gRPC (`GetMemberBalance`, `src/balances/`) y responde `FAILED_PRECONDITION` con lo que debe o tiene a favor. `CreateGroup` agrega a quien lo pide como primer miembro.
 
 También implementa `grpc.health.v1` (`protos/health.proto`, copia del estándar de gRPC) para los probes de Kubernetes.
 
@@ -48,11 +48,19 @@ Publica en el exchange `quadracount.events` (topic). Para esto se usa `amqplib` 
 - `gasto.creado`: `expense_id`, `description`, `amount`, `paid_by`, `paid_by_name`, `shares` (`user_id`, `amount`) y `source`.
 - `miembro.agregado` y `miembro.eliminado`: `user_id` y `name`.
 
+Quien publica también declara las colas de los consumidores (`balances.events` ← `gasto.creado` y `activity.events` ← `#`). Un evento que llega a un exchange sin colas enlazadas se descarta, así que las colas tienen que existir antes del primer evento, aunque el consumidor todavía no haya arrancado (pasa al desplegar todo a la vez).
+
 Se publica con `amqp-connection-manager`: si RabbitMQ está caído, el gasto se guarda igual y el evento queda en memoria hasta que se reconecta. Si groups-service se reinicia justo en ese momento, el evento se pierde (la solución completa sería un *outbox*; no hace falta para este proyecto).
 
 ## Datos de ejemplo
 
-Con `SEED_DEMO=true`, al arrancar crea (si no existen) los usuarios Martín, Camila, Sofía y Diego (`martin@quadracount.dev`, contraseña `quadra123`) y el grupo `g-depto` "Depto Los Carrera 1450". Todavía sin gastos: se crean por GraphQL para que pasen por los eventos.
+Con `SEED_DEMO=true` carga los datos de la sección 1 del plan (`src/seed/seed.service.ts`):
+
+- 6 usuarios: Martín, Camila, Sofía, Diego, Valentina y Tomás (`martin@quadracount.dev`, `tomas@quadracount.dev`, etc.), todos con la contraseña `quadra123`.
+- 3 grupos: "Depto Los Carrera 1450", "Proyecto Ingeniería de Software" y "Paseo fin de semestre".
+- Los 4 gastos con sus fechas reales y el pago de Diego a Martín ($10.000).
+
+Los gastos pasan por el mismo `createExpense` que un gasto normal (publican `gasto.creado`) y el pago se registra en balances-service por gRPC, así que los tres servicios quedan consistentes: Martín +12.000, Camila +1.000, Sofía −5.000, Diego −8.000. Corre en segundo plano y reintenta hasta que balances-service responda. Es idempotente: ids fijos y la colección `seed_state`.
 
 ## Variables de entorno
 

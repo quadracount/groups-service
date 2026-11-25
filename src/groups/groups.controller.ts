@@ -1,26 +1,44 @@
 import { Controller } from '@nestjs/common';
 import { GrpcMethod } from '@nestjs/microservices';
+import { UsersService } from '../users/users.service';
 import { GroupsService } from './groups.service';
 import type {
+  AddMemberRequest,
   CreateExpenseRequest,
+  CreateGroupRequest,
   Expense,
   GetGroupRequest,
   GetUserRequest,
   Group,
   ListExpensesRequest,
   ListGroupsForUserRequest,
+  RegisterUserRequest,
+  RemoveMemberRequest,
   User,
+  VerifyCredentialsRequest,
 } from './proto-types';
 
-// Implementa GroupsService de groups.proto. Los métodos que faltan
-// (registro, login, crear grupo, miembros) responden UNIMPLEMENTED hasta la Fase 4.
+/** Implementa GroupsService de groups.proto. */
 @Controller()
 export class GroupsController {
-  constructor(private readonly groups: GroupsService) {}
+  constructor(
+    private readonly groups: GroupsService,
+    private readonly users: UsersService,
+  ) {}
+
+  @GrpcMethod('GroupsService', 'RegisterUser')
+  registerUser(req: RegisterUserRequest): Promise<User> {
+    return this.users.register(req);
+  }
+
+  @GrpcMethod('GroupsService', 'VerifyCredentials')
+  verifyCredentials(req: VerifyCredentialsRequest): Promise<User> {
+    return this.users.verifyCredentials(req.email, req.password);
+  }
 
   @GrpcMethod('GroupsService', 'GetUser')
   getUser(req: GetUserRequest): Promise<User> {
-    return this.groups.getUser(req.user_id);
+    return this.users.getUser(req.user_id);
   }
 
   @GrpcMethod('GroupsService', 'ListGroupsForUser')
@@ -33,6 +51,25 @@ export class GroupsController {
   @GrpcMethod('GroupsService', 'GetGroup')
   getGroup(req: GetGroupRequest): Promise<Group> {
     return this.groups.getGroup(req.group_id, req.requester_id);
+  }
+
+  @GrpcMethod('GroupsService', 'CreateGroup')
+  createGroup(req: CreateGroupRequest): Promise<Group> {
+    return this.groups.createGroup(req.name, req.requester_id);
+  }
+
+  @GrpcMethod('GroupsService', 'AddMember')
+  addMember(req: AddMemberRequest): Promise<Group> {
+    return this.groups.addMember(req.group_id, req.email, req.requester_id);
+  }
+
+  @GrpcMethod('GroupsService', 'RemoveMember')
+  removeMember(req: RemoveMemberRequest): Promise<Group> {
+    return this.groups.removeMember(
+      req.group_id,
+      req.user_id,
+      req.requester_id,
+    );
   }
 
   @GrpcMethod('GroupsService', 'CreateExpense')

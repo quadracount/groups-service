@@ -34,8 +34,36 @@ export interface Expense {
   created_at: string;
 }
 
+export interface RegisterUserRequest {
+  name: string;
+  email: string;
+  password: string;
+}
+
+export interface VerifyCredentialsRequest {
+  email: string;
+  password: string;
+}
+
 export interface GetUserRequest {
   user_id: string;
+}
+
+export interface CreateGroupRequest {
+  name: string;
+  requester_id: string;
+}
+
+export interface AddMemberRequest {
+  group_id: string;
+  email: string;
+  requester_id: string;
+}
+
+export interface RemoveMemberRequest {
+  group_id: string;
+  user_id: string;
+  requester_id: string;
 }
 
 export interface ListGroupsForUserRequest {

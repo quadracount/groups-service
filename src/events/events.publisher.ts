@@ -5,6 +5,21 @@ import { randomUUID } from 'node:crypto';
 
 export const EVENTS_EXCHANGE = 'quadracount.events';
 
+/**
+ * Declara el exchange y las colas de TODOS los consumidores con sus bindings.
+ * Lo hacen los que publican (este servicio y balances-service), no solo los
+ * consumidores: un evento que llega a un exchange sin colas enlazadas se descarta,
+ * así que las colas tienen que existir antes del primer evento aunque el
+ * consumidor todavía no haya arrancado.
+ */
+async function declareTopology(channel: ConfirmChannel): Promise<void> {
+  await channel.assertExchange(EVENTS_EXCHANGE, 'topic', { durable: true });
+  await channel.assertQueue('balances.events', { durable: true });
+  await channel.bindQueue('balances.events', EVENTS_EXCHANGE, 'gasto.creado');
+  await channel.assertQueue('activity.events', { durable: true });
+  await channel.bindQueue('activity.events', EVENTS_EXCHANGE, '#');
+}
+
 export type EventType =
   'gasto.creado' | 'miembro.agregado' | 'miembro.eliminado';
 
@@ -22,8 +37,7 @@ export class EventsPublisher implements OnApplicationShutdown {
   ]);
   private readonly channel = this.connection.createChannel({
     json: false,
-    setup: (channel: ConfirmChannel) =>
-      channel.assertExchange(EVENTS_EXCHANGE, 'topic', { durable: true }),
+    setup: declareTopology,
   });
 
   constructor() {
@@ -39,11 +53,16 @@ export class EventsPublisher implements OnApplicationShutdown {
    * No espera la confirmación de RabbitMQ: si está caído, el mensaje queda en
    * memoria y se envía al reconectar, sin bloquear la respuesta gRPC.
    */
-  publish(type: EventType, groupId: string, data: object): void {
+  publish(
+    type: EventType,
+    groupId: string,
+    data: object,
+    occurredAt: Date = new Date(),
+  ): void {
     const event = {
       event_id: randomUUID(),
       type,
-      occurred_at: new Date().toISOString(),
+      occurred_at: occurredAt.toISOString(),
       group_id: groupId,
       data,
     };
